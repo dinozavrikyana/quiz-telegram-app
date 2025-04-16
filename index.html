@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quiz Mini App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: Arial;
+            padding: 20px;
+            background: #f0f2f5;
+        }
+        .question {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 8px 0;
+            background: #0088cc;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .progress {
+            height: 5px;
+            background: #ddd;
+            margin-bottom: 20px;
+        }
+        .progress-inner {
+            height: 100%;
+            background: #0088cc;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="progress">
+        <div class="progress-inner" style="width: 0%"></div>
+    </div>
+    <div id="content"></div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        let currentQuestion = 0;
+        let score = 0;
+        
+        // Конфигурация квиза
+        const quizData = [
+            {
+                question: "Сколько планет в Солнечной системе?",
+                answers: ["7", "8", "9", "10"],
+                correct: 1
+            },
+            {
+                question: "Столица Франции?",
+                answers: ["Марсель", "Лион", "Париж", "Ницца"],
+                correct: 2
+            },
+            {
+                question: "Кто написал 'Войну и мир'?",
+                answers: ["Достоевский", "Толстой", "Чехов", "Тургенев"],
+                correct: 1
+            }
+        ];
+
+        // Инициализация приложения
+        tg.expand();
+        tg.MainButton.hide();
+        
+        // Загрузка прогресса
+        const savedProgress = localStorage.getItem('quizProgress');
+        if (savedProgress) {
+            const progress = JSON.parse(savedProgress);
+            currentQuestion = progress.currentQuestion;
+            score = progress.score;
+        }
+
+        // Отображение вопроса
+        function showQuestion() {
+            const question = quizData[currentQuestion];
+            let html = `
+                <div class="question">
+                    <h3>${question.question}</h3>
+                    ${question.answers.map((answer, index) => `
+                        <button onclick="handleAnswer(${index})">${answer}</button>
+                    `).join('')}
+                </div>
+            `;
+            
+            document.getElementById('content').innerHTML = html;
+            updateProgress();
+        }
+
+        // Обработка ответа
+        function handleAnswer(answerIndex) {
+            if (answerIndex === quizData[currentQuestion].correct) {
+                score++;
+            }
+            
+            currentQuestion++;
+            
+            if (currentQuestion < quizData.length) {
+                showQuestion();
+            } else {
+                showResult();
+            }
+            
+            // Сохранение прогресса
+            localStorage.setItem('quizProgress', JSON.stringify({
+                currentQuestion,
+                score
+            }));
+        }
+
+        // Показ результатов
+        function showResult() {
+            localStorage.removeItem('quizProgress');
+            const html = `
+                <div class="question">
+                    <h3>Результат</h3>
+                    <p>Правильных ответов: ${score} из ${quizData.length}</p>
+                    <button onclick="restartQuiz()">Пройти ещё раз</button>
+                </div>
+            `;
+            document.getElementById('content').innerHTML = html;
+            tg.MainButton.setText("Закрыть").show().onClick(() => tg.close());
+        }
+
+        // Обновление прогрессбара
+        function updateProgress() {
+            const progress = (currentQuestion / quizData.length) * 100;
+            document.querySelector('.progress-inner').style.width = `${progress}%`;
+        }
+
+        // Рестарт квиза
+        function restartQuiz() {
+            currentQuestion = 0;
+            score = 0;
+            showQuestion();
+            tg.MainButton.hide();
+        }
+
+        // Старт приложения
+        showQuestion();
+    </script>
+</body>
+</html>
